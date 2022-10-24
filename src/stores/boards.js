@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, watch } from "vue";
+import { computed, ref } from "vue";
 
 import supabase from "../config/supabase";
 import useUserStore from "./user";
@@ -22,8 +22,6 @@ const useBoardStore = defineStore("board", () => {
 
   async function loadById(id) {
     const board = ref();
-    const columnsById = ref();
-    const cardsById = ref();
 
     const { data, error } = await supabase
       .from("boards")
@@ -34,31 +32,21 @@ const useBoardStore = defineStore("board", () => {
 
     board.value = data[0];
     board.value.order = JSON.parse(board.value.column_order);
-    columnsById.value = board.value.columns.reduce((obj, column) => {
-      obj[column.id] = column;
-      column.order = JSON.parse(column.card_order);
-      return obj;
-    }, {});
-    cardsById.value = board.value.cards.reduce((obj, card) => {
-      obj[card.id] = card;
-      return obj;
-    }, {});
 
-    watch(
-      () => board.value?.order,
-      async () => {
-        board.value.column_order = JSON.stringify(board.value.order);
-        const newColumnOrder = { column_order: board.value.column_order };
-        await update(board.value.id, newColumnOrder);
-      }
-    );
+    const columnsById = computed(() => {
+      return board.value.columns.reduce((obj, column) => {
+        obj[column.id] = column;
+        column.order = JSON.parse(column.card_order);
+        return obj;
+      }, {});
+    });
 
-    function update(id, newValue) {
-      return supabase
-        .from("boards")
-        .update({ ...newValue })
-        .eq("id", id);
-    }
+    const cardsById = computed(() => {
+      return board.value.cards.reduce((obj, card) => {
+        obj[card.id] = card;
+        return obj;
+      }, {});
+    });
 
     return { board, columnsById, cardsById, error };
   }
@@ -78,7 +66,14 @@ const useBoardStore = defineStore("board", () => {
     return { error: error?.message };
   }
 
-  return { allBoards, load, loadById, save };
+  function update(id, newValue) {
+    return supabase
+      .from("boards")
+      .update({ ...newValue })
+      .eq("id", id);
+  }
+
+  return { allBoards, load, loadById, save, update };
 });
 
 export default useBoardStore;
