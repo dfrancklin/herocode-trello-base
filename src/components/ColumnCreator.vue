@@ -1,5 +1,6 @@
 <script setup>
 import { nextTick, ref } from "vue";
+
 import LoadingIcon from "./icons/LoadingIcon.vue";
 
 const props = defineProps({
@@ -9,14 +10,14 @@ const props = defineProps({
   },
 });
 
-const formShown = ref(false);
+const inputShown = ref(false);
 const errorMessage = ref();
 const loading = ref(false);
 const columnName = ref("");
 const input = ref();
 
 function showForm() {
-  formShown.value = true;
+  inputShown.value = true;
   nextTick(() => input.value?.focus());
 }
 
@@ -36,12 +37,12 @@ async function saveColumn() {
 function clear() {
   errorMessage.value = "";
   columnName.value = "";
-  formShown.value = false;
+  inputShown.value = false;
 }
 </script>
 
 <template>
-  <div v-if="formShown" class="w-full grid gap-4 p-4 bg-base-300 rounded-xl">
+  <div v-if="inputShown" class="w-full grid gap-4 p-4 bg-base-300 rounded-xl">
     <h2 class="text-xl text-center font-semibold uppercase">New Column</h2>
 
     <p v-if="errorMessage" class="text-red-500 text-center">

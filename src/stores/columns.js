@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+
 import supabase from "../config/supabase";
 
 const useColumnStore = defineStore("column", () => {
@@ -18,14 +19,22 @@ const useColumnStore = defineStore("column", () => {
     };
   }
 
-  function update(id, newValue) {
+  function update(id, newValues) {
     return supabase
       .from("columns")
-      .update({ ...newValue })
+      .update({ ...newValues })
       .eq("id", id);
   }
 
-  return { save, update };
+  function remove(id) {
+    return supabase.from("columns").delete().eq("id", id);
+  }
+
+  function removeMultiple(ids) {
+    return supabase.from("columns").delete().in("id", ids);
+  }
+
+  return { save, update, remove, removeMultiple };
 });
 
 export default useColumnStore;

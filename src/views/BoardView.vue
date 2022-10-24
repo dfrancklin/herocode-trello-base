@@ -1,7 +1,9 @@
 <script setup>
-import BoardDragAndDrop from "../components/BoardDragAndDrop.vue";
-import LoadingIcon from "../components/icons/LoadingIcon.vue";
 import MainLayout from "../layouts/MainLayout.vue";
+
+import LoadingIcon from "../components/icons/LoadingIcon.vue";
+
+import BoardDragAndDrop from "../components/BoardDragAndDrop.vue";
 </script>
 
 <template>

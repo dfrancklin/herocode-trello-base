@@ -1,9 +1,11 @@
 <script setup>
 import { computed, ref } from "vue";
-import CardModal from "./CardModal.vue";
+
 import TextIcon from "./icons/TextIcon.vue";
 
-const props = defineProps(["card", "updateCard"]);
+import CardModal from "./CardModal.vue";
+
+const props = defineProps(["card", "updateCard", "removeCard"]);
 
 const dueAt = computed(() => {
   if (!props.card?.due_at) return null;
@@ -28,7 +30,6 @@ const showModal = ref(false);
         <span v-if="dueAt" class="badge badge-primary h-7 leading-7">
           {{ dueAt }}
         </span>
-
         <button @click="showModal = true" class="absolute inset-0"></button>
       </div>
     </div>
@@ -38,6 +39,7 @@ const showModal = ref(false);
     v-if="showModal"
     :card="card"
     :updateCard="updateCard"
+    :removeCard="removeCard"
     @close="showModal = false"
   />
 </template>

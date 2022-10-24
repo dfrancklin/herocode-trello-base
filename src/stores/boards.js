@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import supabase from "../config/supabase";
+
 import useUserStore from "./user";
 
 const useBoardStore = defineStore("board", () => {
@@ -66,14 +67,18 @@ const useBoardStore = defineStore("board", () => {
     return { error: error?.message };
   }
 
-  function update(id, newValue) {
+  function update(id, newValues) {
     return supabase
       .from("boards")
-      .update({ ...newValue })
+      .update({ ...newValues })
       .eq("id", id);
   }
 
-  return { allBoards, load, loadById, save, update };
+  function remove(id) {
+    return supabase.from("boards").delete().eq("id", id);
+  }
+
+  return { allBoards, load, loadById, save, update, remove };
 });
 
 export default useBoardStore;

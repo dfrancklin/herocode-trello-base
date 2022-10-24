@@ -2,8 +2,9 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 
-import LoadingIcon from "../components/icons/LoadingIcon.vue";
 import useUserStore from "../stores/user";
+
+import LoadingIcon from "../components/icons/LoadingIcon.vue";
 
 const userStore = useUserStore();
 const errorMessage = ref();

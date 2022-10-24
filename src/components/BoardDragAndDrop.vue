@@ -1,15 +1,21 @@
 <script setup>
-import { watch } from "vue";
-import { useRoute } from "vue-router";
+import { ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import draggable from "vuedraggable-es";
 
 import useBoardStore from "../stores/boards";
 import useCardStore from "../stores/cards";
 import useColumnStore from "../stores/columns";
+
+import LoadingIcon from "./icons/LoadingIcon.vue";
+
+import BoardHeader from "./BoardHeader.vue";
 import CardCreator from "./CardCreator.vue";
 import CardItem from "./CardItem.vue";
 import ColumnCreator from "./ColumnCreator.vue";
+import ColumnHeader from "./ColumnHeader.vue";
 
+const router = useRouter();
 const route = useRoute();
 const boardStore = useBoardStore();
 const columnStore = useColumnStore();
@@ -19,6 +25,7 @@ const boardId = route.params.boardId;
 const { board, columnsById, cardsById, error } = await boardStore.loadById(
   boardId
 );
+const removing = ref(false);
 
 watch(
   () => board.value?.order,
@@ -33,7 +40,6 @@ watch(
 watch(
   () => board.value?.columns,
   () => {
-    console.log("columns updated");
     board.value?.columns.forEach(async (column) => {
       const newCardOrder = JSON.stringify(column.order);
 
@@ -46,6 +52,64 @@ watch(
   { deep: true }
 );
 
+// BOARD FUNCTIONS
+async function onUpdateBoard(boardName) {
+  const { error, data } = await boardStore.update(boardId, { name: boardName });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  board.value.name = data[0].name;
+}
+
+async function onRemoveBoard() {
+  removing.value = true;
+  const cardIds = Object.keys(cardsById.value);
+  const { error: cardError } = await cardStore.removeMultiple(cardIds);
+
+  if (cardError) {
+    removing.value = false;
+    alert(
+      "An error occurred while trying to delete all the cards from this board\nError: " +
+        cardError.message +
+        "\nPlease, refresh the page and try again!"
+    );
+    return;
+  }
+
+  const columnIds = Object.keys(columnsById.value);
+  const { error: columnError } = await columnStore.removeMultiple(columnIds);
+
+  if (columnError) {
+    removing.value = false;
+    alert(
+      "An error occurred while trying to delete all the columns from this board\nError: " +
+        columnError.message +
+        "\nPlease, refresh the page and try again!"
+    );
+    return;
+  }
+
+  const { error: boardError } = await boardStore.remove(boardId);
+
+  if (boardError) {
+    removing.value = false;
+    alert(
+      "An error occurred while trying to delete this board\nError: " +
+        boardError.message +
+        "\nPlease, refresh the page and try again!"
+    );
+    return;
+  }
+
+  removing.value = false;
+  alert("Successfully deleted this board");
+  router.push({ name: "home" });
+}
+
+// COLUMN FUNCTIONS
 async function onSaveColumn(columnName) {
   const { column, error } = await columnStore.save(boardId, columnName);
 
@@ -53,12 +117,61 @@ async function onSaveColumn(columnName) {
     return { error };
   }
 
+  column.order = JSON.parse(column.card_order);
+  columnsById.value[column.id] = column;
   board.value.columns.push(column);
   board.value.order.push(column.id);
 
   return {};
 }
 
+async function onUpdateColumn(columnId, columnName) {
+  const { error, data } = await columnStore.update(columnId, {
+    name: columnName,
+  });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  columnsById.value[columnId].name = data[0].name;
+}
+
+async function onRemoveColumn(columnId) {
+  const cardIds = columnsById.value[columnId].order;
+  const { error: cardError } = await cardStore.removeMultiple(cardIds);
+
+  if (cardError) {
+    alert(
+      "An error occurred while trying to delete all the cards from the column\nError: " +
+        cardError.message +
+        "\nPlease, refresh the page and try again!"
+    );
+    return;
+  }
+
+  const { error: columnError } = await columnStore.remove(columnId);
+
+  if (columnError) {
+    alert(
+      "An error occurred while trying to delete the column\nError: " +
+        columnError.message +
+        "\nPlease, refresh the page and try again!"
+    );
+    return;
+  }
+
+  board.value.cards = board.value.cards.filter(
+    (card) => !cardIds.includes(card.id)
+  );
+  board.value.order = board.value.order.filter((it) => it !== columnId);
+  board.value.columns = board.value.columns.filter(
+    (column) => column.id !== columnId
+  );
+}
+
+// CARD FUNCTIONS
 function onSaveCard(columnId) {
   return async (cardName) => {
     const { card, error } = await cardStore.save(boardId, cardName);
@@ -86,6 +199,23 @@ async function onUpdateCard(cardId, newValues) {
 
   return {};
 }
+
+function onRemoveCard(columnId) {
+  return async (cardId) => {
+    const { error } = await cardStore.remove(cardId);
+
+    if (error) {
+      return { error };
+    }
+
+    const cardIndex = board.value.cards.findIndex((card) => card.id === cardId);
+    const orderIndex = columnsById.value[columnId].order.indexOf(cardId);
+    board.value?.cards.splice(cardIndex, 1);
+    columnsById.value[columnId].order.splice(orderIndex, 1);
+
+    return {};
+  };
+}
 </script>
 
 <template>
@@ -95,9 +225,15 @@ async function onUpdateCard(cardId, newValues) {
   </p>
 
   <template v-else>
-    <button class="btn btn-ghost h-auto">
-      <h1 class="text-2xl text-left w-full">{{ board.name }}</h1>
-    </button>
+    <BoardHeader
+      :board="board"
+      :updateBoard="onUpdateBoard"
+      :removeBoard="onRemoveBoard"
+    />
+
+    <p v-if="removing" class="flex items-center mb-3">
+      <LoadingIcon /> Removing...
+    </p>
 
     <div class="overflow-x-auto flex flex-grow -mx-8">
       <div class="flex flex-grow px-8 pb-4">
@@ -111,19 +247,18 @@ async function onUpdateCard(cardId, newValues) {
             <div
               class="column bg-base-100 flex flex-col rounded-2xl mr-4 w-[300px]"
             >
-              <div class="bg-base-300 p-3 rounded-t-xl flex gap-2 items-center">
-                <button class="btn btn-sm btn-ghost h-auto flex-1">
-                  <h2 class="text-left w-full">
-                    {{ columnsById[columnId].name }}
-                  </h2>
-                </button>
-              </div>
+              <ColumnHeader
+                v-if="columnsById[columnId]"
+                :column="columnsById[columnId]"
+                :updateColumn="onUpdateColumn"
+                :removeColumn="onRemoveColumn"
+              />
 
               <div
                 class="flex flex-grow overflow-y-auto p-3 gap-3 max-h-[calc(100vh_-_17.5rem)]"
               >
                 <draggable
-                  :list="columnsById[columnId].order"
+                  :list="columnsById[columnId]?.order"
                   group="cards"
                   :item-key="(id) => `card-${id}`"
                   animation="200"
@@ -132,8 +267,10 @@ async function onUpdateCard(cardId, newValues) {
                   <template #item="{ element: cardId }">
                     <div class="cursor-move">
                       <CardItem
+                        v-if="cardsById[cardId]"
                         :card="cardsById[cardId]"
                         :updateCard="onUpdateCard"
+                        :removeCard="onRemoveCard(columnId)"
                       />
                     </div>
                   </template>

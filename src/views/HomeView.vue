@@ -1,11 +1,14 @@
 <script setup>
 import { storeToRefs } from "pinia";
 
+import useBoardStore from "../stores/boards";
+
+import MainLayout from "../layouts/MainLayout.vue";
+
+import LoadingIcon from "../components/icons/LoadingIcon.vue";
+
 import BoardCreator from "../components/BoardCreator.vue";
 import BoardItem from "../components/BoardItem.vue";
-import LoadingIcon from "../components/icons/LoadingIcon.vue";
-import MainLayout from "../layouts/MainLayout.vue";
-import useBoardStore from "../stores/boards";
 
 const boardStore = useBoardStore();
 boardStore.load();

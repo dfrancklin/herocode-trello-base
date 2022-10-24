@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+
 import supabase from "../config/supabase";
 
 const useCardStore = defineStore("card", () => {
@@ -18,14 +19,22 @@ const useCardStore = defineStore("card", () => {
     };
   }
 
-  function update(id, newValue) {
+  function update(id, newValues) {
     return supabase
       .from("cards")
-      .update({ ...newValue })
+      .update({ ...newValues })
       .eq("id", id);
   }
 
-  return { save, update };
+  function remove(id) {
+    return supabase.from("cards").delete().eq("id", id);
+  }
+
+  const removeMultiple = (ids) => {
+    return supabase.from("cards").delete().in("id", ids);
+  };
+
+  return { save, update, remove, removeMultiple };
 });
 
 export default useCardStore;
